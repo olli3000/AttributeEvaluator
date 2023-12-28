@@ -1,0 +1,47 @@
+A: m0 ntr -> v0 syn
+d: v1 syn -> v0 syn
+N: p2 syn -> v0 syn	v2 syn -> v0 syn
+
+A: m0 inh -> v0 syn
+r: 
+
+C: m0 inh -> m1 inh	m0 inh -> v0 syn
+E: m1 inh -> v1 syn	v1 syn -> v0 syn
+=: 
+
+C: m0 inh -> m1 inh	m0 inh -> m3 inh	m0 inh -> v0 syn
+E: m1 inh -> v1 ntr
+=: 
+C: m3 inh -> v3 syn	v3 syn -> v0 syn
+
+C: m0 inh -> m1 inh	m0 inh -> v0 syn
+E: m1 inh -> v1 syn	v1 syn -> m3 inh
+w: 
+C: m3 inh -> v3 syn	v3 syn -> v0 syn
+
+S: 
+C: m1 val -> v1 syn	v1 syn -> v0 syn
+
+T: m0 inh -> m1 inh	m0 inh -> m3 inh	m0 inh -> v0 syn
+A: m1 inh -> v1 syn	v1 syn -> v0 syn
+*: 
+T: m3 inh -> v3 syn	v3 syn -> v0 syn
+
+T: m0 inh -> m1 inh	m0 inh -> v0 syn
+A: m1 inh -> v1 syn	v1 syn -> v0 syn
+
+E: m0 inh -> m1 inh	m0 inh -> m3 inh	m0 inh -> v0 syn
+T: m1 inh -> v1 syn	v1 syn -> v0 syn
++: 
+E: m3 inh -> v3 syn	v3 syn -> v0 syn
+
+E: m0 inh -> m1 inh	m0 inh -> v0 syn
+T: m1 inh -> v1 syn	v1 syn -> v0 syn
+
+N: 
+d: v1 syn -> v0 syn
+N: p2 syn -> p0 syn	p2 syn -> v0 syn	v2 syn -> v0 syn
+
+N: 
+e: 
+
