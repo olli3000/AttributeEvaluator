@@ -1,0 +1,1 @@
+This Attribute Evaluator is the proof of concept implementation for my Bachelor Thesis. It computes for a given Attribute Grammar transitive dependence relations and for each production a local execution order.
