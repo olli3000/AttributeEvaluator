@@ -8,7 +8,7 @@ import java.util.Objects;
 public class Attribute {
 
 	public static enum Type {
-		INHERITED("inh"), INIT_BY_VALUE("val"), SYNTHESIZED("syn"), NEUTRAL("ntr");
+		INHERITED("inh"), INIT_BY_VALUE("val"), SYNTHESIZED("syn");
 
 		private final String str;
 
@@ -25,6 +25,7 @@ public class Attribute {
 	private final int index;
 	private final String name;
 	private Type type;
+	private boolean needed;
 
 	public final int ID;
 	private static int id;
@@ -36,13 +37,14 @@ public class Attribute {
 	private boolean visited;
 
 	public Attribute(int index, String name) {
-		this(index, name, index == 0 ? Type.INHERITED : Type.SYNTHESIZED);
+		this(index, name, index == 0 ? Type.INHERITED : Type.SYNTHESIZED, true);
 	}
 
-	public Attribute(int index, String name, Type type) {
+	public Attribute(int index, String name, Type type, boolean needed) {
 		this.index = index;
 		this.name = name;
 		this.type = type;
+		this.needed = needed;
 		this.ID = id;
 		id++;
 	}
@@ -142,6 +144,10 @@ public class Attribute {
 
 	public void setType(Type type) {
 		this.type = type;
+	}
+
+	public boolean isNeeded() {
+		return needed;
 	}
 
 	public int getIndex() {

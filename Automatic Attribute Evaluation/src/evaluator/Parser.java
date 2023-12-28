@@ -112,7 +112,7 @@ public class Parser {
 
 			lAttribute = putAttributeIfAbsentOrNeutral(lVariable.getAttributes(), lAttribute);
 
-			addAttributeToAllVariables(lVariable.getName(), lAttribute.getName());
+			addAttributeToAllVariables(lVariable.getName(), lAttribute.getName(), lAttribute.getType());
 
 			if (parseRightAttributes(rightMatch, lAttribute, production) == 0) {
 				lAttribute.setType(Type.INIT_BY_VALUE);
@@ -133,7 +133,7 @@ public class Parser {
 
 			leftAttribute.addDependencyOn(rAttribute);
 
-			addAttributeToAllVariables(rVariable.getName(), rAttribute.getName());
+			addAttributeToAllVariables(rVariable.getName(), rAttribute.getName(), rAttribute.getType());
 		}
 		return countRightAttr;
 	}
@@ -148,7 +148,7 @@ public class Parser {
 
 	private Attribute putAttributeIfAbsentOrNeutral(Map<String, Attribute> attrSet, Attribute attribute) {
 		if (attrSet.containsKey(attribute.getName() + attribute.getIndex())
-				&& attrSet.get(attribute.getName() + attribute.getIndex()).getType() == Type.NEUTRAL) {
+				&& !attrSet.get(attribute.getName() + attribute.getIndex()).isNeeded()) {
 			attrSet.put(attribute.getName() + attribute.getIndex(), attribute);
 		} else {
 			Attribute prev = attrSet.putIfAbsent(attribute.getName() + attribute.getIndex(), attribute);
@@ -159,16 +159,17 @@ public class Parser {
 		return attribute;
 	}
 
-	private void addAttributeToAllVariables(char ident, String attributeName) {
+	private void addAttributeToAllVariables(char ident, String attributeName, Type type) {
 		for (Variable variable : variableOccurences.get(ident)) {
-			Attribute attribute = new Attribute(variable.getIndex(), attributeName, Type.NEUTRAL);
+			Attribute attribute = new Attribute(variable.getIndex(), attributeName, type, false);
 			variable.getAttributes().putIfAbsent(attribute.getName() + attribute.getIndex(), attribute);
 		}
 	}
 
 	private void getAttributeFromAllVariables(Variable variable) {
 		for (var entry : variableOccurences.get(variable.getName()).get(0).getAttributes().entrySet()) {
-			Attribute attribute = new Attribute(variable.getIndex(), entry.getValue().getName(), Type.NEUTRAL);
+			Attribute attribute = new Attribute(variable.getIndex(), entry.getValue().getName(),
+					entry.getValue().getType(), false);
 			variable.getAttributes().putIfAbsent(attribute.getName() + attribute.getIndex(), attribute);
 		}
 	}

@@ -11,8 +11,6 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import evaluator.Attribute.Type;
-
 public class Production {
 
 	private Variable[] nodes;
@@ -80,7 +78,7 @@ public class Production {
 					prioQueue.add(new AttributePrioNode(other, other.getDependsOn().size()));
 				}
 
-				if (current.getType() != Type.NEUTRAL) {
+				if (current.isNeeded()) {
 					localExecutionOrder.add(current);
 				}
 			}

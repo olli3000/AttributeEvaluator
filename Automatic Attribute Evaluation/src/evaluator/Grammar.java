@@ -1,12 +1,8 @@
 package evaluator;
 
-import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.PriorityQueue;
-import java.util.Queue;
-
-import evaluator.Production.AttributePrioNode;
 
 public class Grammar {
 
@@ -68,22 +64,37 @@ public class Grammar {
 	}
 
 	public void computeAttributeGroups() {
-		Comparator<AttributePrioNode> cmp = (t, o) -> {
-			int cmpPrio = Integer.compare(t.priority(), o.priority());
-			if (cmpPrio == 0) {
-				int cmpType = t.attribute().getType().compareTo(o.attribute().getType());
-				if (cmpType == 0) {
-					return t.attribute().getName().compareTo(o.attribute().getName());
-				}
-				return cmpType;
-			}
-			return cmpPrio;
-		};
-
-		for (var entry : variableOccurences.entrySet()) {
-			Queue<AttributePrioNode> queue = new PriorityQueue<>(cmp);
-			Variable var = entry.getValue().get(0);
+		for (var varEntry : variableOccurences.entrySet()) {
+			List<Variable> varOcc = varEntry.getValue();
+			varOcc.get(0).createGroups();
+			cloneExecutionGroups(varOcc);
 		}
+	}
+
+	private void cloneExecutionGroups(List<Variable> varOcc) {
+		Variable var = varOcc.get(0);
+		for (int i = 1; i < varOcc.size(); i++) {
+			Variable current = varOcc.get(i);
+			for (var group : var.getExecutionGroups()) {
+				List<Attribute> subset = new ArrayList<>();
+				for (Attribute a : group) {
+					subset.add(a);
+				}
+				current.getExecutionGroups().add(subset);
+			}
+		}
+	}
+
+	public String printAttributeGroups() {
+		StringBuilder sb = new StringBuilder();
+		for (var entry : variableOccurences.entrySet()) {
+			Variable var = entry.getValue().get(0);
+			sb.append(var.getName());
+			sb.append(": ");
+			sb.append(var.getExecutionGroups());
+			sb.append("\n");
+		}
+		return sb.toString();
 	}
 
 	@Override

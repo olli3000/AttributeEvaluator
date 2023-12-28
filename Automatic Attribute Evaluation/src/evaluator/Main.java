@@ -12,12 +12,16 @@ public class Main {
 	public static void main(String[] args) throws IOException {
 		Grammar g = new Parser().init();
 //		System.out.println(g);
-		System.out.println(g.printDependencies());
+//		System.out.println(g.printDependencies());
 //		System.out.println("------------------------");
 		g.computeTransitiveClosure();
-		System.out.println(g.printDependencies());
-		g.determineLocalExecutionOrders();
-		System.out.println(g.printLocalExecutionOrders());
+//		System.out.println(g.printDependencies());
+
+//		System.out.println(g);
+		g.computeAttributeGroups();
+		System.out.println(g.printAttributeGroups());
+//		g.determineLocalExecutionOrders();
+//		System.out.println(g.printLocalExecutionOrders());
 
 //		write(g);
 //		String result = g.printDependencies();
