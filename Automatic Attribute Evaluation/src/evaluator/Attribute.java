@@ -66,6 +66,13 @@ public class Attribute {
 		return ret;
 	}
 
+	/**
+	 * Removes the given attribute from the dependsOn-map. If it is located at the
+	 * same variable, the number of attributes {@code this} attribute depends on is
+	 * decreased.
+	 * 
+	 * @param other The attribute to be removed
+	 */
 	public void removeAttributeFromDependsOn(Attribute other) {
 		dependsOn.remove(other.name + other.index, other);
 		if (index == other.index) {
@@ -73,6 +80,17 @@ public class Attribute {
 		}
 	}
 
+	/**
+	 * Searches for a new path to an attribute at the same index. After leaving the
+	 * variable of this index, the first return to this index is considered and the
+	 * search is stopped at this point. The parameter {@code skip} handles the case
+	 * where the the search traverses attributes of the same variable as the
+	 * starting point without leaving.
+	 * 
+	 * @param searchIndex The index of the starting attribute
+	 * @param result      List of attributes to which possibly new paths are found
+	 * @param skip        {@code true} if this attribute should be skipped
+	 */
 	public void findPath(int searchIndex, List<Attribute> result, boolean skip) {
 		if (searchIndex == index && !skip) {
 			result.add(this);
@@ -89,6 +107,12 @@ public class Attribute {
 		visited = false;
 	}
 
+	/**
+	 * Builds a string representation of the outgoing dependencies of this
+	 * attribute.
+	 * 
+	 * @return the string representation
+	 */
 	public String printDependencies() {
 		StringBuilder sb = new StringBuilder();
 		for (var entry : usedFor.entrySet()) {

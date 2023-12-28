@@ -23,6 +23,16 @@ public class Production {
 		this.nodes = nodes;
 	}
 
+	/**
+	 * Tries recursively to find new paths from a starting attribute to another
+	 * attribute at the same index. If no new path is found, the production is
+	 * stable. If a new path is found, the dependency between these to attributes is
+	 * established and it is also added to all other variable occurrences of the
+	 * same identifier.
+	 * 
+	 * @param variableOccurences The map of variable occurrences
+	 * @return {@code true} if the production is stable
+	 */
 	public boolean findProjections(Map<Character, List<Variable>> variableOccurences) {
 		boolean stable = true;
 		for (Variable var : nodes) {
@@ -31,6 +41,11 @@ public class Production {
 		return stable;
 	}
 
+	/**
+	 * Builds a string representation of the dependence relation of this production.
+	 * 
+	 * @return the string representation
+	 */
 	public String printDependencies() {
 		StringBuilder sb = new StringBuilder();
 		for (Variable var : nodes) {
@@ -44,6 +59,11 @@ public class Production {
 	public static record AttributePrioNode(Attribute attribute, int priority) {
 	};
 
+	/**
+	 * Determines the local execution order of this production by favoring the
+	 * attributes of index 0 if there is a tie of priority (as in two attributes
+	 * have no unvisited predecessor).
+	 */
 	public void determineLocalExecutionOrder() {
 		Comparator<AttributePrioNode> cmp = (t, o) -> {
 			int cmpPrio = Integer.compare(t.priority(), o.priority());
@@ -86,6 +106,11 @@ public class Production {
 
 	}
 
+	/**
+	 * Builds a string representation of the execution order.
+	 * 
+	 * @return the string representation
+	 */
 	public String printLocalExecutionOrder() {
 		return toStringPlain() + "\t\t" + localExecutionOrder.toString() + " cycle-free: " + !hasCycle;
 	}

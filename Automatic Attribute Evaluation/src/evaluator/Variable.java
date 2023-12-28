@@ -26,6 +26,15 @@ public class Variable {
 		this.index = index;
 	}
 
+	/**
+	 * Tries to find new paths from attributes to attributes of this variable. This
+	 * variable is stable, if there are no new paths discovered in this iteration.
+	 * If a new path is found, the dependency is established and also added to the
+	 * other variable occurrences of the same identifier.
+	 * 
+	 * @param variableOccurences The map of variable occurrences
+	 * @return {@code true} if the variable is stable
+	 */
 	public boolean findNewPathToSelf(Map<Character, List<Variable>> variableOccurences) {
 		boolean stable = true;
 		for (var entry : attributes.entrySet()) {
@@ -46,6 +55,11 @@ public class Variable {
 		return stable;
 	}
 
+	/**
+	 * Builds the string representation of the dependency relation at this variable.
+	 * 
+	 * @return the string representation
+	 */
 	public String printDependencies() {
 		StringBuilder sb = new StringBuilder();
 		for (var entry : attributes.entrySet()) {
@@ -61,12 +75,24 @@ public class Variable {
 		return sb.toString();
 	}
 
+	/**
+	 * Adds all attributes to the given priority queue depending on their number of
+	 * predecessors.
+	 * 
+	 * @param queue The priority queue to be filled
+	 */
 	public void populateQueue(Queue<AttributePrioNode> queue) {
 		for (var entry : attributes.entrySet()) {
 			queue.add(new AttributePrioNode(entry.getValue(), entry.getValue().getDependsOn().size()));
 		}
 	}
 
+	/**
+	 * Groups the attributes of this variable. A group is formed if the attributes
+	 * are of the same type and only depend on attributes of this variable of
+	 * previously computed groups or non at all. Dependencies to attributes of other
+	 * variables of the same production are ignored.
+	 */
 	public void createGroups() {
 		Comparator<AttributePrioNode> cmp = (t, o) -> {
 			int cmpPrio = Integer.compare(t.priority(), o.priority());
@@ -84,6 +110,12 @@ public class Variable {
 		consumeQueues(inherited, synthesized);
 	}
 
+	/**
+	 * Divides the attributes into queues of inherited and synthesized attributes.
+	 * 
+	 * @param inherited   The queue of inherited attributes
+	 * @param synthesized The queue of synthesized attributes
+	 */
 	private void populateQueues(Queue<AttributePrioNode> inherited, Queue<AttributePrioNode> synthesized) {
 		for (var attrEntry : attributes.entrySet()) {
 			Attribute attr = attrEntry.getValue();
@@ -95,7 +127,16 @@ public class Variable {
 		}
 	}
 
+	/**
+	 * Polls alternating attributes of both queues with currently 0 predecessors of
+	 * the same variable until both queues are empty. If they cannot be emptied, a
+	 * cycle is found.
+	 * 
+	 * @param inherited   The queue of inherited attributes
+	 * @param synthesized The queue of synthesized attributes
+	 */
 	private void consumeQueues(Queue<AttributePrioNode> inherited, Queue<AttributePrioNode> synthesized) {
+		// TODO handle cycles
 		Set<Attribute> visited = new HashSet<>(inherited.size() + synthesized.size());
 		while (!inherited.isEmpty() || !synthesized.isEmpty()) {
 			List<Attribute> inhSubset = createGroup(inherited, inherited, synthesized, visited);
@@ -110,6 +151,18 @@ public class Variable {
 		}
 	}
 
+	/**
+	 * Retrieves all attributes with currently 0 predecessors of the same variable,
+	 * which have not been visited yet. Afterwards it removes those attributes from
+	 * all other attributes, that are still in the queue.
+	 * 
+	 * @param queue       The queue to be emptied. Is the same as either the
+	 *                    inherited or the synthesized queue
+	 * @param inherited   The queue of remaining inherited attributes
+	 * @param synthesized The queue of remaining synthesized attributes
+	 * @param visited     The set of already visited attributes
+	 * @return the group of attributes which can be executed in no specific order
+	 */
 	private List<Attribute> createGroup(Queue<AttributePrioNode> queue, Queue<AttributePrioNode> inherited,
 			Queue<AttributePrioNode> synthesized, Set<Attribute> visited) {
 		List<Attribute> subset = new ArrayList<>();

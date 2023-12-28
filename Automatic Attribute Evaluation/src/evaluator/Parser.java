@@ -18,7 +18,7 @@ public class Parser {
 	private Map<Character, Integer> productionNumbers = new HashMap<>();
 
 	/**
-	 * RegEx for pattern matching of attribute occurrences of the form n[i]
+	 * RegEx for pattern matching of attribute occurrences of the form name[index]
 	 */
 	private static final Pattern ATTRIBUTE_PATTERN = Pattern.compile("\\w+?\\[(\\d+?)]");
 
@@ -110,7 +110,7 @@ public class Parser {
 			Attribute lAttribute = parseAttribute(leftMatch);
 			Variable lVariable = production.getVariableAt(lAttribute.getIndex());
 
-			lAttribute = putAttributeIfAbsentOrNeutral(lVariable.getAttributes(), lAttribute);
+			lAttribute = putAttributeIfAbsentOrNotNeeded(lVariable.getAttributes(), lAttribute);
 
 			addAttributeToAllVariables(lVariable.getName(), lAttribute.getName(), lAttribute.getType());
 
@@ -122,6 +122,18 @@ public class Parser {
 		}
 	}
 
+	/**
+	 * Parses the right-hand side of an attribute equation using the matcher. If a
+	 * match is found, a dependency between the found attribute and the one on the
+	 * left-hand side is established. The attribute is also put in the map of
+	 * attributes of the corresponding variable (and all other variables of the same
+	 * name), if the attribute has not existed before.
+	 * 
+	 * @param match         The matcher searching for attribute occurrences
+	 * @param leftAttribute The attribute on the left-hand side
+	 * @param production    The production for which the equation is defined
+	 * @return the number of found attributes on the right-hand side
+	 */
 	private int parseRightAttributes(Matcher match, Attribute leftAttribute, Production production) {
 		int countRightAttr = 0;
 		while (match.find()) {
@@ -129,7 +141,7 @@ public class Parser {
 			Attribute rAttribute = parseAttribute(match);
 			Variable rVariable = production.getVariableAt(rAttribute.getIndex());
 
-			rAttribute = putAttributeIfAbsentOrNeutral(rVariable.getAttributes(), rAttribute);
+			rAttribute = putAttributeIfAbsentOrNotNeeded(rVariable.getAttributes(), rAttribute);
 
 			leftAttribute.addDependencyOn(rAttribute);
 
@@ -138,6 +150,12 @@ public class Parser {
 		return countRightAttr;
 	}
 
+	/**
+	 * Parses the matched string and creates a new Attribute.
+	 * 
+	 * @param match The matcher searching for attribute occurrences
+	 * @return the parsed attribute
+	 */
 	private Attribute parseAttribute(Matcher match) {
 		String attribute = match.group();
 		int bracketIndex = attribute.indexOf("[");
@@ -146,7 +164,16 @@ public class Parser {
 		return new Attribute(index, name);
 	}
 
-	private Attribute putAttributeIfAbsentOrNeutral(Map<String, Attribute> attrSet, Attribute attribute) {
+	/**
+	 * Puts the given attribute in the given map, if it was not there or not needed
+	 * before. Otherwise it will not be overwritten and the old value will be
+	 * returned.
+	 * 
+	 * @param attrSet   The attribute map of the corresponding variable
+	 * @param attribute The attribute to be put in the map
+	 * @return the current mapping of this attribute
+	 */
+	private Attribute putAttributeIfAbsentOrNotNeeded(Map<String, Attribute> attrSet, Attribute attribute) {
 		if (attrSet.containsKey(attribute.getName() + attribute.getIndex())
 				&& !attrSet.get(attribute.getName() + attribute.getIndex()).isNeeded()) {
 			attrSet.put(attribute.getName() + attribute.getIndex(), attribute);
@@ -159,6 +186,14 @@ public class Parser {
 		return attribute;
 	}
 
+	/**
+	 * For each variable of the same identifier it puts a new attribute with the
+	 * given name and type in the map if absent.
+	 * 
+	 * @param ident         The identifier of the variables
+	 * @param attributeName The name of the new attribute
+	 * @param type          The type of the new attribute
+	 */
 	private void addAttributeToAllVariables(char ident, String attributeName, Type type) {
 		for (Variable variable : variableOccurences.get(ident)) {
 			Attribute attribute = new Attribute(variable.getIndex(), attributeName, type, false);
@@ -166,6 +201,15 @@ public class Parser {
 		}
 	}
 
+	/**
+	 * Retrieves from all variables of the same identifier all currently mapped
+	 * attributes and puts it in the map of the given variable. As all previous
+	 * added variables share the same pool of variables, it is sufficient to only
+	 * look at one variable (e.g. the first one). If it is the first variable of its
+	 * identifier, it will already be in the map but with no attributes.
+	 * 
+	 * @param variable The variable to synchronize to the rest
+	 */
 	private void getAttributeFromAllVariables(Variable variable) {
 		for (var entry : variableOccurences.get(variable.getName()).get(0).getAttributes().entrySet()) {
 			Attribute attribute = new Attribute(variable.getIndex(), entry.getValue().getName(),
