@@ -15,11 +15,15 @@ public class Main {
 //		System.out.println(g.printDependencies());
 //		System.out.println("------------------------");
 		g.computeTransitiveClosure();
-//		System.out.println(g.printDependencies());
+		System.out.println(g.printDependencies());
 
 //		System.out.println(g);
 		g.computeAttributeGroups();
-		System.out.println(g.printAttributeGroups());
+//		System.out.println(g.printAttributeGroups());
+
+		g.determineLocalExecutionOrdersSynchronized();
+		System.out.println(g.printLocalExecutionOrders());
+
 //		g.determineLocalExecutionOrders();
 //		System.out.println(g.printLocalExecutionOrders());
 

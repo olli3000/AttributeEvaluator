@@ -84,8 +84,7 @@ public class Attribute {
 	 * Searches for a new path to an attribute at the same index. After leaving the
 	 * variable of this index, the first return to this index is considered and the
 	 * search is stopped at this point. The parameter {@code skip} handles the case
-	 * where the the search traverses attributes of the same variable as the
-	 * starting point without leaving.
+	 * where the the search traverses attributes of the same variable first.
 	 * 
 	 * @param searchIndex The index of the starting attribute
 	 * @param result      List of attributes to which possibly new paths are found
@@ -154,6 +153,8 @@ public class Attribute {
 //		sb.append(ID);
 //		sb.append(" ");
 //		sb.append(type);
+//		sb.append(" needed: ");
+//		sb.append(needed);
 //		sb.append(" usedFor: [");
 //		for (var a : usedFor.entrySet()) {
 //			sb.append(a.getValue().name + a.getValue().index + " ");

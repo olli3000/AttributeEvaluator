@@ -93,6 +93,7 @@ public class Grammar {
 			List<Variable> varOcc = varEntry.getValue();
 			varOcc.get(0).createGroups();
 			cloneExecutionGroups(varOcc);
+			removeNotNeededAttributes(varOcc.get(0));
 		}
 	}
 
@@ -109,10 +110,33 @@ public class Grammar {
 			for (var group : var.getExecutionGroups()) {
 				List<Attribute> subset = new ArrayList<>();
 				for (Attribute a : group) {
-					// TODO remove attributes of same index from dependsOn of all attributes
-					subset.add(a);
+					Attribute copy = current.getAttributes().get(a.getName() + current.getIndex());
+					for (var entry : copy.getUsedFor().entrySet()) {
+						Attribute other = entry.getValue();
+						if (copy.getIndex() == other.getIndex()) {
+							other.removeAttributeFromDependsOn(copy);
+						}
+					}
+					if (copy.isNeeded()) {
+						subset.add(copy);
+					}
 				}
 				current.getExecutionGroups().add(subset);
+			}
+		}
+	}
+
+	private void removeNotNeededAttributes(Variable var) {
+		for (int i = 0; i < var.getExecutionGroups().size(); i++) {
+			for (int j = 0; j < var.getExecutionGroups().get(i).size(); j++) {
+				if (!var.getExecutionGroups().get(i).get(j).isNeeded()) {
+					var.getExecutionGroups().get(i).remove(j);
+					j--;
+				}
+			}
+			if (var.getExecutionGroups().get(i).isEmpty()) {
+				var.getExecutionGroups().remove(i);
+				i--;
 			}
 		}
 	}
@@ -132,6 +156,14 @@ public class Grammar {
 			sb.append("\n");
 		}
 		return sb.toString();
+	}
+
+	public void determineLocalExecutionOrdersSynchronized() {
+		for (var prodList : productions.entrySet()) {
+			for (Production prod : prodList.getValue()) {
+				prod.determineLocalExecutionOrderSynchronized();
+			}
+		}
 	}
 
 	@Override

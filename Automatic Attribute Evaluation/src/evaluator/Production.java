@@ -115,6 +115,45 @@ public class Production {
 		return toStringPlain() + "\t\t" + localExecutionOrder.toString() + " cycle-free: " + !hasCycle;
 	}
 
+	public void determineLocalExecutionOrderSynchronized() {
+		int[] indices = new int[nodes.length];
+		int lastIndex = 0;
+		int remainingGroups = 0;
+		for (Variable var : nodes) {
+			remainingGroups += var.getExecutionGroups().size();
+		}
+
+		while (remainingGroups > 0) {
+			List<Attribute> currentGroup = null;
+			nextVar: for (int i = 0; i < nodes.length; i++) {
+				int indexOff = (i + lastIndex) % nodes.length;
+				if (nodes[indexOff].getExecutionGroups().size() > indices[indexOff]) {
+					for (Attribute a : nodes[indexOff].getExecutionGroups().get(indices[indexOff])) {
+						if (a.getDependsOn().size() > 0) {
+							continue nextVar;
+						}
+					}
+					currentGroup = nodes[indexOff].getExecutionGroups().get(indices[indexOff]);
+					indices[indexOff]++;
+					lastIndex = indexOff;
+					break;
+				}
+			}
+
+			if (currentGroup == null) {
+				// TODO cycle found between groups
+			} else {
+				for (Attribute a : currentGroup) {
+					for (var entry : a.getUsedFor().entrySet()) {
+						entry.getValue().removeAttributeFromDependsOn(a);
+					}
+					localExecutionOrder.add(a);
+				}
+				remainingGroups--;
+			}
+		}
+	}
+
 	/**
 	 * Returns the (non-)terminal at the given index
 	 * 
