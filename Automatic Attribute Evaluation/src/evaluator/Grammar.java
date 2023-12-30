@@ -86,14 +86,13 @@ public class Grammar {
 	 * groups. A group is formed if the attributes are of the same type and only
 	 * depend on attributes of the same index of previously computed groups or non
 	 * at all. Dependencies to attributes of other variables of the same production
-	 * are ignored.
+	 * are ignored. Group order is then cloned to all other variable occurrences.
 	 */
 	public void computeAttributeGroups() {
 		for (var varEntry : variableOccurences.entrySet()) {
 			List<Variable> varOcc = varEntry.getValue();
 			varOcc.get(0).createGroups();
 			cloneExecutionGroups(varOcc);
-			removeNotNeededAttributes(varOcc.get(0));
 		}
 	}
 
@@ -126,21 +125,6 @@ public class Grammar {
 		}
 	}
 
-	private void removeNotNeededAttributes(Variable var) {
-		for (int i = 0; i < var.getExecutionGroups().size(); i++) {
-			for (int j = 0; j < var.getExecutionGroups().get(i).size(); j++) {
-				if (!var.getExecutionGroups().get(i).get(j).isNeeded()) {
-					var.getExecutionGroups().get(i).remove(j);
-					j--;
-				}
-			}
-			if (var.getExecutionGroups().get(i).isEmpty()) {
-				var.getExecutionGroups().remove(i);
-				i--;
-			}
-		}
-	}
-
 	/**
 	 * Builds a string representation of all attribute groups of all variables.
 	 * 
@@ -158,10 +142,16 @@ public class Grammar {
 		return sb.toString();
 	}
 
+	/**
+	 * Determines for each production an execution order, which keeps all pairs of
+	 * attributes of a variable in the same order for all other variables of the
+	 * same identifier. Finally, not needed attributes are removed.
+	 */
 	public void determineLocalExecutionOrdersSynchronized() {
 		for (var prodList : productions.entrySet()) {
 			for (Production prod : prodList.getValue()) {
 				prod.determineLocalExecutionOrderSynchronized();
+				prod.removeNotNeededAttributes();
 			}
 		}
 	}

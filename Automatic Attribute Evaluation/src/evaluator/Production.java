@@ -115,6 +115,11 @@ public class Production {
 		return toStringPlain() + "\t\t" + localExecutionOrder.toString() + " cycle-free: " + !hasCycle;
 	}
 
+	/**
+	 * Merges sequences of attribute groups of all variables into one linear
+	 * execution order if possible. A group is added to the final order iff all
+	 * predecessors are already considered in the order.
+	 */
 	public void determineLocalExecutionOrderSynchronized() {
 		int[] indices = new int[nodes.length];
 		int lastIndex = 0;
@@ -150,6 +155,17 @@ public class Production {
 					localExecutionOrder.add(a);
 				}
 				remainingGroups--;
+			}
+		}
+	}
+
+	/**
+	 * Removes all not needed attributes to prevent execution if possible.
+	 */
+	public void removeNotNeededAttributes() {
+		for (int i = 0; i < localExecutionOrder.size(); i++) {
+			if (!localExecutionOrder.get(i).isNeeded()) {
+				localExecutionOrder.remove(i--);
 			}
 		}
 	}
