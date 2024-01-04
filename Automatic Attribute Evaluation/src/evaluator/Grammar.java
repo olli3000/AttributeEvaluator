@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import evaluator.Variable.Group;
+
 public class Grammar {
 
 	private Map<Character, List<Production>> productions;
@@ -91,8 +93,13 @@ public class Grammar {
 	public void computeAttributeGroups() {
 		for (var varEntry : variableOccurences.entrySet()) {
 			List<Variable> varOcc = varEntry.getValue();
-			varOcc.get(0).createGroups();
-			cloneExecutionGroups(varOcc);
+			if (varOcc.get(0).createGroups()) {
+				cloneExecutionGroups(varOcc);
+			} else {
+				for (Variable var : varOcc) {
+					var.markCyclic();
+				}
+			}
 		}
 	}
 
@@ -108,7 +115,7 @@ public class Grammar {
 			Variable current = varOcc.get(i);
 			for (var group : var.getExecutionGroups()) {
 				List<Attribute> subset = new ArrayList<>();
-				for (Attribute a : group) {
+				for (Attribute a : group.group()) {
 					Attribute copy = current.getAttributes().get(a.getName() + current.getIndex());
 					for (var entry : copy.getUsedFor().entrySet()) {
 						Attribute other = entry.getValue();
@@ -120,7 +127,7 @@ public class Grammar {
 						subset.add(copy);
 					}
 				}
-				current.getExecutionGroups().add(subset);
+				current.getExecutionGroups().add(new Group(current, group.groupIndex(), subset));
 			}
 		}
 	}
@@ -150,7 +157,8 @@ public class Grammar {
 	public void determineLocalExecutionOrdersSynchronized() {
 		for (var prodList : productions.entrySet()) {
 			for (Production prod : prodList.getValue()) {
-				prod.determineLocalExecutionOrderSynchronized();
+				// TODO abort if cycle found?
+				prod.determineLocalExecutionOrderSynchronized(variableOccurences);
 				prod.removeNotNeededAttributes();
 			}
 		}

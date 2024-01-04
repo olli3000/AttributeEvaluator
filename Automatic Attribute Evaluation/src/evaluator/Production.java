@@ -11,17 +11,19 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import evaluator.Variable.Group;
+
 public class Production {
 
 	private Variable[] nodes;
 	private int index;
 
-	private List<Attribute> localExecutionOrder = new ArrayList<>();
-	private boolean hasCycle;
+	private List<Group> localExecutionOrder = new ArrayList<>();
+	private boolean acyclic = true;
 
-	public Production(Variable... nodes) {
-		this.nodes = nodes;
-	}
+//	public Production(Variable... nodes) {
+//		this.nodes = nodes;
+//	}
 
 	/**
 	 * Tries recursively to find new paths from a starting attribute to another
@@ -86,7 +88,7 @@ public class Production {
 		while (!prioQueue.isEmpty()) {
 			Attribute current = prioQueue.poll().attribute;
 			if (current.getDependsOn().size() > 0) {
-				hasCycle = true;
+				acyclic = false;
 				break;
 			}
 			if (!visited.contains(current)) {
@@ -99,7 +101,7 @@ public class Production {
 				}
 
 				if (current.isNeeded()) {
-					localExecutionOrder.add(current);
+					localExecutionOrder.add(new Group(nodes[current.getIndex()], current.getIndex(), List.of(current)));
 				}
 			}
 		}
@@ -112,51 +114,129 @@ public class Production {
 	 * @return the string representation
 	 */
 	public String printLocalExecutionOrder() {
-		return toStringPlain() + "\t\t" + localExecutionOrder.toString() + " cycle-free: " + !hasCycle;
+		return toStringPlain() + "\t\t" + localExecutionOrder.toString() + " cycle-free: " + acyclic;
 	}
 
 	/**
 	 * Merges sequences of attribute groups of all variables into one linear
 	 * execution order if possible. A group is added to the final order iff all
 	 * predecessors are already considered in the order.
+	 * 
+	 * @param variableOccurrences A map with all variables in this grammar
+	 * @return {@code true} if this production is cycle-free
 	 */
-	public void determineLocalExecutionOrderSynchronized() {
-		int[] indices = new int[nodes.length];
+	public boolean determineLocalExecutionOrderSynchronized(Map<Character, List<Variable>> variableOccurences) {
 		int lastIndex = 0;
 		int remainingGroups = 0;
 		for (Variable var : nodes) {
 			remainingGroups += var.getExecutionGroups().size();
+			if (!var.isAcyclic()) {
+				acyclic = false;
+				return false;
+			}
 		}
 
-		while (remainingGroups > 0) {
-			List<Attribute> currentGroup = null;
+		execution: while (remainingGroups > 0) {
+			Group currentGroup = null;
 			nextVar: for (int i = 0; i < nodes.length; i++) {
 				int indexOff = (i + lastIndex) % nodes.length;
-				if (nodes[indexOff].getExecutionGroups().size() > indices[indexOff]) {
-					for (Attribute a : nodes[indexOff].getExecutionGroups().get(indices[indexOff])) {
+				if (!nodes[indexOff].getExecutionGroups().isEmpty()) {
+					for (Attribute a : nodes[indexOff].getExecutionGroups().get(0).group()) {
 						if (a.getDependsOn().size() > 0) {
 							continue nextVar;
 						}
 					}
-					currentGroup = nodes[indexOff].getExecutionGroups().get(indices[indexOff]);
-					indices[indexOff]++;
+					currentGroup = nodes[indexOff].getExecutionGroups().remove(0);
 					lastIndex = indexOff;
 					break;
 				}
 			}
 
 			if (currentGroup == null) {
-				// TODO cycle found between groups
-			} else {
-				for (Attribute a : currentGroup) {
-					for (var entry : a.getUsedFor().entrySet()) {
-						entry.getValue().removeAttributeFromDependsOn(a);
+				// find group to be split (at least 1 element without preds)
+				for (int varIndex = 0; varIndex < nodes.length; varIndex++) {
+					if (!nodes[varIndex].getExecutionGroups().isEmpty()) {
+						Group toSplit = nodes[varIndex].getExecutionGroups().get(0);
+						List<Attribute> newSplit = new ArrayList<>();
+						for (int j = 0; j < toSplit.group().size(); j++) {
+							if (toSplit.group().get(j).getDependsOn().isEmpty()) {
+								newSplit.add(toSplit.group().remove(j--));
+							}
+						}
+
+						if (!newSplit.isEmpty()) {
+							// first handle all other variable occurrences
+							for (Variable var : variableOccurences.get(nodes[varIndex].getName())) {
+								// skip reference variable
+								if (var != nodes[varIndex]) {
+									if (var.getExecutionGroups().isEmpty()) {
+										// find and split groups in handled variables (= productions with already
+										// computed orders)
+										Production p = var.getProduction();
+										for (int i = 0; i < p.localExecutionOrder.size(); i++) {
+											Group other = p.localExecutionOrder.get(i);
+											if (other.var().getName() == var.getName() && other.var() != toSplit.var()
+													&& toSplit.groupIndex() == other.groupIndex() && other.group()
+															.size() == toSplit.group().size() + newSplit.size()) {
+												// split other
+												List<Attribute> otherSplit = new ArrayList<>();
+												for (Attribute a : newSplit) {
+													for (int j = 0; j < other.group().size(); j++) {
+														if (a.getName().equals(other.group().get(j).getName())) {
+															otherSplit.add(other.group().remove(j--));
+														}
+													}
+												}
+												p.localExecutionOrder.add(i++, new Group(other.var(),
+														other.groupIndex() - otherSplit.size(), otherSplit));
+												break;
+											}
+										}
+									} else {
+										// split same group at not-handled variables
+										for (int i = 0; i < var.getExecutionGroups().size(); i++) {
+											Group other = var.getExecutionGroups().get(i);
+											if (other.groupIndex() == toSplit.groupIndex()) {
+												List<Attribute> otherSplit = new ArrayList<>();
+												for (Attribute a : newSplit) {
+													for (int j = 0; j < other.group().size(); j++) {
+														if (a.getName().equals(other.group().get(j).getName())) {
+															otherSplit.add(other.group().remove(j--));
+														}
+													}
+												}
+												var.getExecutionGroups().add(i++, new Group(other.var(),
+														other.groupIndex() - otherSplit.size(), otherSplit));
+											}
+										}
+									}
+								}
+							}
+							nodes[varIndex].getExecutionGroups().add(0,
+									new Group(toSplit.var(), toSplit.groupIndex() - newSplit.size(), newSplit));
+							remainingGroups++;
+							continue execution;
+						}
 					}
-					localExecutionOrder.add(a);
 				}
+
+				acyclic = false;
+				return false;
+			} else
+
+			{
+				for (Attribute a : currentGroup.group()) {
+					for (var entry : a.getUsedFor().entrySet()) {
+						if (a.getIndex() != entry.getValue().getIndex()) {
+							entry.getValue().removeAttributeFromDependsOn(a);
+						}
+					}
+				}
+				localExecutionOrder.add(currentGroup);
 				remainingGroups--;
 			}
 		}
+		return true;
 	}
 
 	/**
@@ -164,7 +244,12 @@ public class Production {
 	 */
 	public void removeNotNeededAttributes() {
 		for (int i = 0; i < localExecutionOrder.size(); i++) {
-			if (!localExecutionOrder.get(i).isNeeded()) {
+			for (int j = 0; j < localExecutionOrder.get(i).group().size(); j++) {
+				if (!localExecutionOrder.get(i).group().get(j).isNeeded()) {
+					localExecutionOrder.get(i).group().remove(j--);
+				}
+			}
+			if (localExecutionOrder.get(i).group().isEmpty()) {
 				localExecutionOrder.remove(i--);
 			}
 		}
@@ -178,6 +263,10 @@ public class Production {
 	 */
 	public Variable getVariableAt(int index) {
 		return nodes[index];
+	}
+
+	public void setNodes(Variable[] nodes) {
+		this.nodes = nodes;
 	}
 
 	@Override

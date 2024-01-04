@@ -53,8 +53,9 @@ public class Parser {
 	private Production parseLine(String line) {
 		String[] rules = line.split(":", 2);
 
-		Variable[] variables = parseProduction(rules[0]);
-		Production production = new Production(variables);
+//		Variable[] variables = parseProduction(rules[0]);
+		Production production = new Production();
+		production.setNodes(parseProduction(rules[0], production));
 
 		char prodRoot = production.getVariableAt(0).getName();
 
@@ -75,15 +76,16 @@ public class Parser {
 	 * Parses the left half of the line, which is by convention the production
 	 * itself
 	 * 
-	 * @param rule The production rule
+	 * @param rule       The production rule
+	 * @param production The associated production object
 	 * @return The array of parsed variables
 	 */
-	private Variable[] parseProduction(String rule) {
+	private Variable[] parseProduction(String rule, Production production) {
 		variableCount = 0;
 		return Arrays.stream(rule.split("->")).mapMulti((string, consumer) -> {
 			string.chars().filter(varName -> varName != ' ').forEachOrdered(varName -> consumer.accept(varName));
 		}).map(varName -> {
-			Variable var = new Variable((char) ((Integer) varName).intValue(), variableCount++);
+			Variable var = new Variable((char) ((Integer) varName).intValue(), variableCount++, production);
 			if (!variableOccurences.containsKey(var.getName())) {
 				variableOccurences.put(var.getName(), new ArrayList<>());
 			}

@@ -17,13 +17,23 @@ public class Variable {
 
 	private final char name;
 	private final int index;
+	private final Production production;
 	private Map<String, Attribute> attributes = new HashMap<>();
 
-	private List<List<Attribute>> executionGroups = new ArrayList<>();
+	public static record Group(Variable var, int groupIndex, List<Attribute> group) {
+		@Override
+		public String toString() {
+			return groupIndex + " " + group.toString();
+		}
+	}
 
-	public Variable(char name, int index) {
+	private boolean acyclic = true;
+	private List<Group> executionGroups = new ArrayList<>();
+
+	public Variable(char name, int index, Production production) {
 		this.name = name;
 		this.index = index;
+		this.production = production;
 	}
 
 	/**
@@ -92,8 +102,10 @@ public class Variable {
 	 * are of the same type and only depend on attributes of this variable of
 	 * previously computed groups or non at all. Dependencies to attributes of other
 	 * variables of the same production are ignored.
+	 * 
+	 * @return {@code true} if the variable is cycle-free
 	 */
-	public void createGroups() {
+	public boolean createGroups() {
 		Comparator<AttributePrioNode> cmp = (t, o) -> {
 			int cmpPrio = Integer.compare(t.priority(), o.priority());
 			if (cmpPrio == 0) {
@@ -107,7 +119,7 @@ public class Variable {
 
 		populateQueues(inherited, synthesized);
 
-		consumeQueues(inherited, synthesized);
+		return consumeQueues(inherited, synthesized);
 	}
 
 	/**
@@ -134,21 +146,33 @@ public class Variable {
 	 * 
 	 * @param inherited   The queue of inherited attributes
 	 * @param synthesized The queue of synthesized attributes
+	 * @return {@code true} if this variable is cycle-free
 	 */
-	private void consumeQueues(Queue<AttributePrioNode> inherited, Queue<AttributePrioNode> synthesized) {
-		// TODO handle cycles
+	private boolean consumeQueues(Queue<AttributePrioNode> inherited, Queue<AttributePrioNode> synthesized) {
+		int groupIndex = -1;
 		Set<Attribute> visited = new HashSet<>(inherited.size() + synthesized.size());
 		while (!inherited.isEmpty() || !synthesized.isEmpty()) {
+			boolean cycle = true;
 			List<Attribute> inhSubset = createGroup(inherited, inherited, synthesized, visited);
+			cycle &= inhSubset.isEmpty();
 			if (!inhSubset.isEmpty()) {
-				executionGroups.add(inhSubset);
+				executionGroups.add(new Group(this, groupIndex += inhSubset.size(), inhSubset));
+//				groupIndex += inhSubset.size();
 			}
 
 			List<Attribute> synSubset = createGroup(synthesized, inherited, synthesized, visited);
+			cycle &= synSubset.isEmpty();
 			if (!synSubset.isEmpty()) {
-				executionGroups.add(synSubset);
+				executionGroups.add(new Group(this, groupIndex += synSubset.size(), synSubset));
+//				groupIndex += synSubset.size();
+			}
+
+			if (cycle) {
+				acyclic = false;
+				return false;
 			}
 		}
+		return true;
 	}
 
 	/**
@@ -198,11 +222,23 @@ public class Variable {
 		return index;
 	}
 
+	public Production getProduction() {
+		return production;
+	}
+
 	public Map<String, Attribute> getAttributes() {
 		return attributes;
 	}
 
-	public List<List<Attribute>> getExecutionGroups() {
+	public boolean isAcyclic() {
+		return acyclic;
+	}
+
+	public void markCyclic() {
+		this.acyclic = false;
+	}
+
+	public List<Group> getExecutionGroups() {
 		return executionGroups;
 	}
 
