@@ -127,116 +127,131 @@ public class Production {
 	 */
 	public boolean determineLocalExecutionOrderSynchronized(Map<Character, List<Variable>> variableOccurences) {
 		int lastIndex = 0;
+		int remainingGroups = numOfExecutionGroups();
+
+		execution: while (remainingGroups > 0) {
+			int retIndex = findGroupWithoutPredecessors(lastIndex);
+			if (retIndex != -1) {
+				Group currentGroup = nodes[retIndex].getExecutionGroups().remove(0);
+				updateDependencies(currentGroup);
+				localExecutionOrder.add(currentGroup);
+				remainingGroups--;
+				lastIndex = retIndex;
+			} else {
+				if (breakCycleBetweenGroups(variableOccurences)) {
+					remainingGroups++;
+					continue execution;
+				}
+				acyclic = false;
+				return false;
+			}
+		}
+		return remainingGroups != -1;
+	}
+
+	private int numOfExecutionGroups() {
 		int remainingGroups = 0;
 		for (Variable var : nodes) {
 			remainingGroups += var.getExecutionGroups().size();
 			if (!var.isAcyclic()) {
 				acyclic = false;
-				return false;
+				return -1;
 			}
 		}
+		return remainingGroups;
+	}
 
-		execution: while (remainingGroups > 0) {
-			Group currentGroup = null;
-			nextVar: for (int i = 0; i < nodes.length; i++) {
-				int indexOff = (i + lastIndex) % nodes.length;
-				if (!nodes[indexOff].getExecutionGroups().isEmpty()) {
-					for (Attribute a : nodes[indexOff].getExecutionGroups().get(0).group()) {
-						if (a.getDependsOn().size() > 0) {
-							continue nextVar;
-						}
+	private int findGroupWithoutPredecessors(int lastIndex) {
+		nextVar: for (int i = 0; i < nodes.length; i++) {
+			int indexOffset = (i + lastIndex) % nodes.length;
+			if (!nodes[indexOffset].getExecutionGroups().isEmpty()) {
+				for (Attribute attribute : nodes[indexOffset].getExecutionGroups().get(0).group()) {
+					if (attribute.getDependsOn().size() > 0) {
+						continue nextVar;
 					}
-					currentGroup = nodes[indexOff].getExecutionGroups().remove(0);
-					lastIndex = indexOff;
+				}
+				return indexOffset;
+			}
+		}
+		return -1;
+	}
+
+	private void updateDependencies(Group group) {
+		for (Attribute attribute : group.group()) {
+			for (var entry : attribute.getUsedFor().entrySet()) {
+				if (attribute.getIndex() != entry.getValue().getIndex()) {
+					entry.getValue().removeAttributeFromDependsOn(attribute);
+				}
+			}
+		}
+	}
+
+	private boolean breakCycleBetweenGroups(Map<Character, List<Variable>> variableOccurences) {
+		for (int varIndex = 0; varIndex < nodes.length; varIndex++) {
+			if (!nodes[varIndex].getExecutionGroups().isEmpty()) {
+
+				Group toSplit = nodes[varIndex].getExecutionGroups().get(0);
+				List<Attribute> newSplit = splitGroup(toSplit);
+
+				if (!newSplit.isEmpty()) {
+					splitOtherVariableOccurrences(variableOccurences, varIndex, toSplit, newSplit);
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	private List<Attribute> splitGroup(Group toSplit) {
+		List<Attribute> newSplit = new ArrayList<>();
+		for (int i = 0; i < toSplit.group().size(); i++) {
+			if (toSplit.group().get(i).getDependsOn().isEmpty()) {
+				newSplit.add(toSplit.group().remove(i--));
+			}
+		}
+		return newSplit;
+	}
+
+	private void splitOtherVariableOccurrences(Map<Character, List<Variable>> variableOccurences, int varIndex,
+			Group toSplit, List<Attribute> newSplit) {
+		for (Variable var : variableOccurences.get(nodes[varIndex].getName())) {
+			if (var != nodes[varIndex]) {
+				if (var.getExecutionGroups().isEmpty()) {
+					splitGroupInVariableOrProduction(var, var.getProduction().localExecutionOrder, toSplit, newSplit);
+				} else {
+					splitGroupInVariableOrProduction(var, var.getExecutionGroups(), toSplit, newSplit);
+				}
+			}
+		}
+		nodes[varIndex].getExecutionGroups().add(0,
+				new Group(toSplit.var(), toSplit.groupIndex() - newSplit.size(), newSplit));
+	}
+
+	private void splitGroupInVariableOrProduction(Variable var, List<Group> executionGroups, Group toSplit,
+			List<Attribute> newSplit) {
+		for (int i = 0; i < executionGroups.size(); i++) {
+			Group other = executionGroups.get(i);
+			if (other.var().getName() == var.getName() && other.var() != toSplit.var()
+					&& other.groupIndex() == toSplit.groupIndex()
+					&& other.group().size() == toSplit.group().size() + newSplit.size()) {
+
+				List<Attribute> otherSplit = cloneSplit(other, newSplit);
+				executionGroups.add(i++, new Group(other.var(), other.groupIndex() - otherSplit.size(), otherSplit));
+			}
+		}
+	}
+
+	private List<Attribute> cloneSplit(Group other, List<Attribute> newSplit) {
+		List<Attribute> otherSplit = new ArrayList<>();
+		for (Attribute attribute : newSplit) {
+			for (int j = 0; j < other.group().size(); j++) {
+				if (attribute.getName().equals(other.group().get(j).getName())) {
+					otherSplit.add(other.group().remove(j--));
 					break;
 				}
 			}
-
-			if (currentGroup == null) {
-				// find group to be split (at least 1 element without preds)
-				for (int varIndex = 0; varIndex < nodes.length; varIndex++) {
-					if (!nodes[varIndex].getExecutionGroups().isEmpty()) {
-						Group toSplit = nodes[varIndex].getExecutionGroups().get(0);
-						List<Attribute> newSplit = new ArrayList<>();
-						for (int j = 0; j < toSplit.group().size(); j++) {
-							if (toSplit.group().get(j).getDependsOn().isEmpty()) {
-								newSplit.add(toSplit.group().remove(j--));
-							}
-						}
-
-						if (!newSplit.isEmpty()) {
-							// first handle all other variable occurrences
-							for (Variable var : variableOccurences.get(nodes[varIndex].getName())) {
-								// skip reference variable
-								if (var != nodes[varIndex]) {
-									if (var.getExecutionGroups().isEmpty()) {
-										// find and split groups in handled variables (= productions with already
-										// computed orders)
-										Production p = var.getProduction();
-										for (int i = 0; i < p.localExecutionOrder.size(); i++) {
-											Group other = p.localExecutionOrder.get(i);
-											if (other.var().getName() == var.getName() && other.var() != toSplit.var()
-													&& toSplit.groupIndex() == other.groupIndex() && other.group()
-															.size() == toSplit.group().size() + newSplit.size()) {
-												// split other
-												List<Attribute> otherSplit = new ArrayList<>();
-												for (Attribute a : newSplit) {
-													for (int j = 0; j < other.group().size(); j++) {
-														if (a.getName().equals(other.group().get(j).getName())) {
-															otherSplit.add(other.group().remove(j--));
-														}
-													}
-												}
-												p.localExecutionOrder.add(i++, new Group(other.var(),
-														other.groupIndex() - otherSplit.size(), otherSplit));
-												break;
-											}
-										}
-									} else {
-										// split same group at not-handled variables
-										for (int i = 0; i < var.getExecutionGroups().size(); i++) {
-											Group other = var.getExecutionGroups().get(i);
-											if (other.groupIndex() == toSplit.groupIndex()) {
-												List<Attribute> otherSplit = new ArrayList<>();
-												for (Attribute a : newSplit) {
-													for (int j = 0; j < other.group().size(); j++) {
-														if (a.getName().equals(other.group().get(j).getName())) {
-															otherSplit.add(other.group().remove(j--));
-														}
-													}
-												}
-												var.getExecutionGroups().add(i++, new Group(other.var(),
-														other.groupIndex() - otherSplit.size(), otherSplit));
-											}
-										}
-									}
-								}
-							}
-							nodes[varIndex].getExecutionGroups().add(0,
-									new Group(toSplit.var(), toSplit.groupIndex() - newSplit.size(), newSplit));
-							remainingGroups++;
-							continue execution;
-						}
-					}
-				}
-
-				acyclic = false;
-				return false;
-			} else
-
-			{
-				for (Attribute a : currentGroup.group()) {
-					for (var entry : a.getUsedFor().entrySet()) {
-						if (a.getIndex() != entry.getValue().getIndex()) {
-							entry.getValue().removeAttributeFromDependsOn(a);
-						}
-					}
-				}
-				localExecutionOrder.add(currentGroup);
-				remainingGroups--;
-			}
 		}
-		return true;
+		return otherSplit;
 	}
 
 	/**
