@@ -149,6 +149,12 @@ public class Production {
 		return remainingGroups != -1;
 	}
 
+	/**
+	 * Sums up the number of execution groups of all variables in this production.
+	 * 
+	 * @return the number of execution groups or {@code -1} if at least one variable
+	 *         is cyclic
+	 */
 	private int numOfExecutionGroups() {
 		int remainingGroups = 0;
 		for (Variable var : nodes) {
@@ -161,6 +167,13 @@ public class Production {
 		return remainingGroups;
 	}
 
+	/**
+	 * Checks all nodes beginning at {@code lastIndex} for a group where all
+	 * predecessors are known at this point.
+	 * 
+	 * @param lastIndex The index of the first node to check
+	 * @return the index of the next node or {@code -1} iff no group can be executed
+	 */
 	private int findGroupWithoutPredecessors(int lastIndex) {
 		nextVar: for (int i = 0; i < nodes.length; i++) {
 			int indexOffset = (i + lastIndex) % nodes.length;
@@ -176,6 +189,12 @@ public class Production {
 		return -1;
 	}
 
+	/**
+	 * Removes all attributes of the given group from the predecessor set of all
+	 * depending attributes.
+	 * 
+	 * @param group the group which will be executed
+	 */
 	private void updateDependencies(Group group) {
 		for (Attribute attribute : group.group()) {
 			for (var entry : attribute.getUsedFor().entrySet()) {
@@ -186,6 +205,18 @@ public class Production {
 		}
 	}
 
+	/**
+	 * If no group can be executed, there are cyclic dependencies between these
+	 * remaining groups. It still might be possible to execute all groups, if one of
+	 * them contains attributes with 0 predecessors. This group is then split into a
+	 * group of attributes without predecessors and a group with the remaining
+	 * attributes. Afterwards the algorithm can continue execution as if normal. The
+	 * split of a group has to be also applied to the other variable occurrences of
+	 * the same identifier.
+	 * 
+	 * @param variableOccurences A map with all variables in this grammar
+	 * @return {@code true} iff there is a group which can be split
+	 */
 	private boolean breakCycleBetweenGroups(Map<Character, List<Variable>> variableOccurences) {
 		for (int varIndex = 0; varIndex < nodes.length; varIndex++) {
 			if (!nodes[varIndex].getExecutionGroups().isEmpty()) {
@@ -202,6 +233,13 @@ public class Production {
 		return false;
 	}
 
+	/**
+	 * Splits the given group by removing all attributes without predecessors and
+	 * collecting them in a new list.
+	 * 
+	 * @param toSplit the group which needs to be split
+	 * @return a new list of attributes without predecessors
+	 */
 	private List<Attribute> splitGroup(Group toSplit) {
 		List<Attribute> newSplit = new ArrayList<>();
 		for (int i = 0; i < toSplit.group().size(); i++) {
@@ -212,6 +250,20 @@ public class Production {
 		return newSplit;
 	}
 
+	/**
+	 * Searches for the given group {@code toSplit} in other variable occurrences of
+	 * the same identifier and splits their respective groups. If a variable has no
+	 * groups left, then for this variable the execution order of its production has
+	 * already been determined and the corresponding group can be found and split
+	 * there. Otherwise the group has not been consumed yet and it is found at the
+	 * variable itself.
+	 * 
+	 * @param variableOccurences A map with all variables in this grammar
+	 * @param varIndex           The index of the original variable where the cycle
+	 *                           occurred
+	 * @param toSplit            The group which has to be split
+	 * @param newSplit           The list of attributes without predecessors
+	 */
 	private void splitOtherVariableOccurrences(Map<Character, List<Variable>> variableOccurences, int varIndex,
 			Group toSplit, List<Attribute> newSplit) {
 		for (Variable var : variableOccurences.get(nodes[varIndex].getName())) {
@@ -227,6 +279,15 @@ public class Production {
 				new Group(toSplit.var(), toSplit.groupIndex() - newSplit.size(), newSplit));
 	}
 
+	/**
+	 * Splits the given group in the list of execution groups of this variable by
+	 * cloning the split.
+	 * 
+	 * @param var             the variable where the split occurs
+	 * @param executionGroups the list where the group can be found
+	 * @param toSplit         the original group which has to be split
+	 * @param newSplit        the list of attributes that form a new group
+	 */
 	private void splitGroupInVariableOrProduction(Variable var, List<Group> executionGroups, Group toSplit,
 			List<Attribute> newSplit) {
 		for (int i = 0; i < executionGroups.size(); i++) {
@@ -241,6 +302,14 @@ public class Production {
 		}
 	}
 
+	/**
+	 * Splits the given group by removing attributes found in {@code newSplit} and
+	 * puts them into a new list.
+	 * 
+	 * @param other    the group which will be split
+	 * @param newSplit the list of attributes that have no predecessors
+	 * @return the cloned list of attributes of {@code newSplit}
+	 */
 	private List<Attribute> cloneSplit(Group other, List<Attribute> newSplit) {
 		List<Attribute> otherSplit = new ArrayList<>();
 		for (Attribute attribute : newSplit) {
