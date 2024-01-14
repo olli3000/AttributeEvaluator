@@ -250,4 +250,65 @@ public class Variable {
 	public String toStringPlain() {
 		return name + "";
 	}
+
+	private String leftMost = "";
+
+	public String getLeftMost() {
+		return leftMost;
+	}
+
+	private String laTexIdent;
+
+	public String getLaTexIdent() {
+		return laTexIdent;
+	}
+
+	public String getLaTex(StringBuilder sb, String[] posHelper, Map<Character, List<Variable>> variableOccurences) {
+
+		List<Attribute> synthesized = new ArrayList<>();
+		String ident = "";
+		for (var aEntry : attributes.entrySet()) {
+			Attribute a = aEntry.getValue();
+			if (a.getType() == Type.SYNTHESIZED || index == 0 && a.getType() == Type.INIT_BY_VALUE) {
+				synthesized.add(a);
+			} else {
+				ident = name + "" + variableOccurences.get(name).indexOf(this) + a.getName();
+				a.setLaTexIdent(ident);
+				laTexPositionHelper("attribute", ident, a.getName(), sb, posHelper, variableOccurences);
+			}
+		}
+
+		ident = name + "" + variableOccurences.get(name).indexOf(this);
+		laTexIdent = ident;
+		laTexPositionHelper("terminal", ident, name + "", sb, posHelper, variableOccurences);
+
+		for (Attribute a : synthesized) {
+			ident = name + "" + variableOccurences.get(name).indexOf(this) + a.getName();
+			a.setLaTexIdent(ident);
+			laTexPositionHelper("attribute", ident, a.getName(), sb, posHelper, variableOccurences);
+		}
+		return ident;
+	}
+
+	private void laTexPositionHelper(String type, String ident, String name_, StringBuilder sb, String[] posHelper,
+			Map<Character, List<Variable>> variableOccurences) {
+		sb.append("\\node[").append(type).append("] (").append(ident).append(") ");
+		if (posHelper[0].isEmpty() && posHelper[1].isEmpty()) {
+			posHelper[1] = ident;
+		} else {
+			if (!posHelper[0].isEmpty()) {
+				sb.append("[below = 2cm of ").append(posHelper[0]).append("] ");
+				posHelper[0] = "";
+				posHelper[1] = ident;
+			} else {
+				sb.append("[right = 2mm of ").append(posHelper[1]).append("] ");
+				posHelper[1] = ident;
+			}
+		}
+		sb.append("{").append(name_).append("};\n");
+
+		if (leftMost.isEmpty()) {
+			leftMost = ident;
+		}
+	}
 }

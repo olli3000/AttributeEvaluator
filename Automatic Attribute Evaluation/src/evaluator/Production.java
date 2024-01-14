@@ -353,6 +353,14 @@ public class Production {
 		this.nodes = nodes;
 	}
 
+	public Variable[] getNodes() {
+		return nodes;
+	}
+
+	public void setIndex(int index) {
+		this.index = index;
+	}
+
 	@Override
 	public String toString() {
 		return "Production: " + nodes[0] + " -> "
@@ -364,11 +372,54 @@ public class Production {
 				+ Arrays.stream(nodes).skip(1).map(var -> var.toStringPlain()).collect(Collectors.joining(" "));
 	}
 
-	public Variable[] getNodes() {
-		return nodes;
+	public String getLaTex(StringBuilder sb, String top, Map<Character, List<Variable>> variableOccurences) {
+		String left = "";
+		for (Variable v : nodes) {
+			left = v.getLaTex(sb, new String[] { top, left }, variableOccurences);
+			if (nodes[0] == v) {
+				top = v.getLeftMost();
+			} else {
+				top = "";
+			}
+		}
+
+		sb.append("\n");
+
+		for (Variable v : nodes) {
+			if (v.getIndex() != 0) {
+				sb.append("\\draw[->] (").append(nodes[0].getLaTexIdent()).append(".south) -- (")
+						.append(v.getLaTexIdent()).append(".north);\n");
+			}
+
+			for (var aEntry : v.getAttributes().entrySet()) {
+				Attribute from = aEntry.getValue();
+				for (var oEntry : from.getUsedFor().entrySet()) {
+					Attribute to = oEntry.getValue();
+					laTexDependencyHelper(from, to, sb, variableOccurences);
+				}
+			}
+		}
+
+		sb.append("\n");
+		return nodes[1].getLeftMost();
 	}
 
-	public void setIndex(int index) {
-		this.index = index;
+	private void laTexDependencyHelper(Attribute from, Attribute to, StringBuilder sb,
+			Map<Character, List<Variable>> variableOccurences) {
+		sb.append("\\draw[->,very thick] (").append(from.getLaTexIdent());
+		if (from.isRoot()) {
+			if (to.isRoot()) {
+				sb.append(".north) .. controls +(up:5mm) and +(up:5mm) .. (").append(to.getLaTexIdent())
+						.append(".north");
+			} else {
+				sb.append(".south) -- (").append(to.getLaTexIdent()).append(".north");
+			}
+		} else if (to.isRoot()) {
+			sb.append(".north) -- (").append(to.getLaTexIdent()).append(".south");
+		} else {
+			sb.append(".south) .. controls +(down:5mm) and +(down:5mm) .. (").append(to.getLaTexIdent())
+					.append(".south");
+		}
+		sb.append(");\n");
 	}
 }

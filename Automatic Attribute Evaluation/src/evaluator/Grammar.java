@@ -42,8 +42,7 @@ public class Grammar {
 		StringBuilder sb = new StringBuilder();
 		for (var prodList : productions.entrySet()) {
 			for (Production prod : prodList.getValue()) {
-				sb.append(prod.printDependencies());
-				sb.append("\n");
+				sb.append(prod.printDependencies()).append("\n");
 			}
 		}
 		if (sb.length() > 0) {
@@ -73,8 +72,7 @@ public class Grammar {
 		StringBuilder sb = new StringBuilder();
 		for (var prodList : productions.entrySet()) {
 			for (Production prod : prodList.getValue()) {
-				sb.append(prod.printLocalExecutionOrder());
-				sb.append("\n");
+				sb.append(prod.printLocalExecutionOrder()).append("\n");
 			}
 		}
 		if (sb.length() > 0) {
@@ -141,10 +139,7 @@ public class Grammar {
 		StringBuilder sb = new StringBuilder();
 		for (var entry : variableOccurences.entrySet()) {
 			Variable var = entry.getValue().get(0);
-			sb.append(var.getName());
-			sb.append(": ");
-			sb.append(var.getExecutionGroups());
-			sb.append("\n");
+			sb.append(var.getName()).append(": ").append(var.getExecutionGroups()).append("\n");
 		}
 		return sb.toString();
 	}
@@ -162,6 +157,23 @@ public class Grammar {
 				prod.removeNotNeededAttributes();
 			}
 		}
+	}
+
+	public String getLaTex() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("\\begin{tikzpicture}[\n")
+				.append("terminal/.style={rectangle, draw=black!100, fill=blue!30, thick, minimum size=5mm},\n")
+				.append("attribute/.style={rectangle, draw=black!100, fill=lime!60, thick, rounded corners=2mm, minimum size =5mm}\n]\n\n");
+		String previous = "";
+		for (var pEntry : productions.entrySet()) {
+			for (Production p : pEntry.getValue()) {
+				previous = p.getLaTex(sb, previous, variableOccurences);
+//				Variable v1 = p.getVariableAt(1);
+//				previous = v1.getName() + "" + variableOccurences.get(v1.getName()).indexOf(v1);
+			}
+		}
+		sb.append("\\end{tikzpicture}\n");
+		return sb.toString();
 	}
 
 	@Override

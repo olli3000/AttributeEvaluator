@@ -199,4 +199,13 @@ public class Attribute {
 		return index == 0;
 	}
 
+	private String laTexIdent;
+
+	public String getLaTexIdent() {
+		return laTexIdent;
+	}
+
+	public void setLaTexIdent(String laTexIdent) {
+		this.laTexIdent = laTexIdent;
+	}
 }
