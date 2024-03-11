@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import evaluator.Attribute.Type;
 import evaluator.Production.AttributePrioNode;
@@ -23,7 +24,8 @@ public class Variable {
 	public static record Group(Variable var, int groupIndex, List<Attribute> group) {
 		@Override
 		public String toString() {
-			return groupIndex + " " + group.toString();
+			return "{" + group.stream().map(a -> a.prettyPrint("" + var.getName() + var.getIndex()))
+					.collect(Collectors.joining(", ")) + "}";
 		}
 	}
 
@@ -157,14 +159,12 @@ public class Variable {
 			cycle &= inhSubset.isEmpty();
 			if (!inhSubset.isEmpty()) {
 				executionGroups.add(new Group(this, groupIndex += inhSubset.size(), inhSubset));
-//				groupIndex += inhSubset.size();
 			}
 
 			List<Attribute> synSubset = createGroup(synthesized, inherited, synthesized, visited);
 			cycle &= synSubset.isEmpty();
 			if (!synSubset.isEmpty()) {
 				executionGroups.add(new Group(this, groupIndex += synSubset.size(), synSubset));
-//				groupIndex += synSubset.size();
 			}
 
 			if (cycle) {
@@ -274,7 +274,7 @@ public class Variable {
 			} else {
 				ident = name + "" + variableOccurences.get(name).indexOf(this) + a.getName();
 				a.setLaTexIdent(ident);
-				laTexPositionHelper("attribute", ident, a.getName(), sb, posHelper, variableOccurences);
+				laTexPositionHelper("inherited", ident, a.getName(), sb, posHelper, variableOccurences);
 			}
 		}
 
@@ -285,14 +285,14 @@ public class Variable {
 		for (Attribute a : synthesized) {
 			ident = name + "" + variableOccurences.get(name).indexOf(this) + a.getName();
 			a.setLaTexIdent(ident);
-			laTexPositionHelper("attribute", ident, a.getName(), sb, posHelper, variableOccurences);
+			laTexPositionHelper("synthesized", ident, a.getName(), sb, posHelper, variableOccurences);
 		}
 		return ident;
 	}
 
 	private void laTexPositionHelper(String type, String ident, String name_, StringBuilder sb, String[] posHelper,
 			Map<Character, List<Variable>> variableOccurences) {
-		sb.append("\\node[").append(type).append("] (").append(ident).append(") ");
+		sb.append("    \\node[").append(type).append("] (").append(ident).append(") ");
 		if (posHelper[0].isEmpty() && posHelper[1].isEmpty()) {
 			posHelper[1] = ident;
 		} else {

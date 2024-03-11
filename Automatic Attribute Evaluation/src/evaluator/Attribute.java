@@ -144,6 +144,11 @@ public class Attribute {
 		return "" + name + index + " " + type;
 	}
 
+	public String prettyPrint(String varPrefix) {
+		return varPrefix + "." + name;
+	}
+
+	// For debugging
 //	@Override
 //	public String toString() {
 //		StringBuilder sb = new StringBuilder();

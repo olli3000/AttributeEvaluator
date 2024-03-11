@@ -387,7 +387,7 @@ public class Production {
 
 		for (Variable v : nodes) {
 			if (v.getIndex() != 0) {
-				sb.append("\\draw[->,very thick] (").append(nodes[0].getLaTexIdent()).append(".south) -- (")
+				sb.append("    \\draw[-,very thick] (").append(nodes[0].getLaTexIdent()).append(".south) -- (")
 						.append(v.getLaTexIdent()).append(".north);\n");
 			}
 
@@ -406,7 +406,7 @@ public class Production {
 
 	private void laTexDependencyHelper(Attribute from, Attribute to, StringBuilder sb,
 			Map<Character, List<Variable>> variableOccurences) {
-		sb.append("\\draw[->,thick] (").append(from.getLaTexIdent());
+		sb.append("    \\draw[->,thick] (").append(from.getLaTexIdent());
 		if (from.isRoot()) {
 			if (to.isRoot()) {
 				sb.append(".north) .. controls +(up:5mm) and +(up:5mm) .. (").append(to.getLaTexIdent())

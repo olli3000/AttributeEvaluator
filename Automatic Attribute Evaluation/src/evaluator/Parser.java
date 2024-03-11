@@ -36,6 +36,17 @@ public class Parser {
 			lines.add(line);
 		}
 		scanner.close();
+		return init(lines);
+	}
+
+	/**
+	 * Initializes a new grammar with the inputed production and semantic rules.
+	 * Each input line contains exactly one production and the corresponding system
+	 * of equation (optional).
+	 * 
+	 * @return The newly initialized Grammar
+	 */
+	public Grammar init(List<String> lines) {
 		return new Grammar(
 				lines.stream().map(line -> parseLine(line))
 						.collect(Collectors.groupingBy(production -> production.getVariableAt(0).getName())),

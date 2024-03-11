@@ -55,7 +55,7 @@ public class Grammar {
 	 * Determines the local execution order for each production by trying to put
 	 * attributes at root level, meaning index 0, as early as possible.
 	 */
-	public void determineLocalExecutionOrders() {
+	public void determineSimpleLocalExecutionOrders() {
 		for (var prodList : productions.entrySet()) {
 			for (Production prod : prodList.getValue()) {
 				prod.determineLocalExecutionOrder();
@@ -149,10 +149,9 @@ public class Grammar {
 	 * attributes of a variable in the same order for all other variables of the
 	 * same identifier. Finally, not needed attributes are removed.
 	 */
-	public void determineLocalExecutionOrdersSynchronized() {
+	public void determineCompatibleLocalExecutionOrders() {
 		for (var prodList : productions.entrySet()) {
 			for (Production prod : prodList.getValue()) {
-				// TODO abort if cycle found?
 				prod.determineLocalExecutionOrderSynchronized(variableOccurences);
 				prod.removeNotNeededAttributes();
 			}
@@ -162,14 +161,13 @@ public class Grammar {
 	public String getLaTex() {
 		StringBuilder sb = new StringBuilder();
 		sb.append("\\begin{tikzpicture}[\n")
-				.append("terminal/.style={rectangle, draw=black!100, fill=blue!30, thick, minimum size=5mm},\n")
-				.append("attribute/.style={rectangle, draw=black!100, fill=lime!60, thick, rounded corners=2mm, minimum size =5mm}\n]\n\n");
+				.append("    terminal/.style={rectangle, draw=black!100, fill=blue!30, thick, minimum size=5mm},\n")
+				.append("    inherited/.style={rectangle, draw=black!100, fill=lime!60, thick, rounded corners=2mm, minimum size =5mm},\n")
+				.append("    synthesized/.style={rectangle, draw=black!100, fill=orange!60, thick, rounded corners=2mm, minimum size =5mm}\n    ]\n\n");
 		String previous = "";
 		for (var pEntry : productions.entrySet()) {
 			for (Production p : pEntry.getValue()) {
 				previous = p.getLaTex(sb, previous, variableOccurences);
-//				Variable v1 = p.getVariableAt(1);
-//				previous = v1.getName() + "" + variableOccurences.get(v1.getName()).indexOf(v1);
 			}
 		}
 		sb.append("\\end{tikzpicture}\n");
