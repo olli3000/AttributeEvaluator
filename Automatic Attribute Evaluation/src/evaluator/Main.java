@@ -11,18 +11,21 @@ public class Main {
 
 	public static void main(String[] args) throws IOException {
 		Grammar g = new Parser().init();
+//		System.out.println(g.getLaTex());
+//		System.out.println("------------------------");
 //		System.out.println(g);
 //		System.out.println(g.printDependencies());
 //		System.out.println("------------------------");
 		g.computeTransitiveClosure();
+//		System.out.println(g.getLaTex());
 //		System.out.println(g.printDependencies());
 
 //		System.out.println(g);
 		g.computeAttributeGroups();
-//		System.out.println(g.printAttributeGroups());
+		System.out.println(g.printAttributeGroups());
 
 		g.determineLocalExecutionOrdersSynchronized();
-//		System.out.println(g.printLocalExecutionOrders());
+		System.out.println(g.printLocalExecutionOrders());
 
 //		g.determineLocalExecutionOrders();
 //		System.out.println(g.printLocalExecutionOrders());
