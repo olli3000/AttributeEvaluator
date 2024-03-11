@@ -31,4 +31,39 @@ public class TestClass {
 		System.out.println(g.printDependencies());
 		assertEquals(g.printDependencies(), read("files\\output\\calculator_dependency_output.txt"));
 	}
+	
+	@Test
+	void example_3_1_5() {
+	}
+	
+	@Test
+	void example_3_2_2() {
+	}
+	
+	@Test
+	void example_3_3_2() {
+	}
+	
+	@Test
+	void example_3_3_3() {
+	}
+	
+	@Test
+	void example_3_4_2() {
+	}
+	@Test
+	void example_3_5_1() {
+	}
+	
+	@Test
+	void example_3_6_1() {
+	}
+	
+	@Test
+	void example_3_6_2() {
+	}
+	
+	@Test
+	void example_4() {
+	}
 }
